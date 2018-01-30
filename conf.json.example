@@ -1,0 +1,10 @@
+{
+	"facebook" : {
+		"email" : "example@test.com",
+		"password" : "hunter2",
+		"owner_uid" : "000000000000000"
+	},
+	"thesaurus" : {
+		"API_KEY" : "0000000000000000000000000000000"
+	}
+}
