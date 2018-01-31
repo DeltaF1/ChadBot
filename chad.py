@@ -65,13 +65,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         if chadlier:
 
             response = "THE CHAD {}".format(chadlier.upper())
-        
-            #self.send(Message(text=response), thread_id=thread_id, thread_type=thread_type)
 
-            
             responses.put((response, thread_id, thread_type))
     elif author_id == config["facebook"]["owner_uid"] and message_object.text == "STOP IT CHAD":
-        responses.put(("Ouch!", thread_id, thread_type))
+        self.send(Message(text="Ouch!"), thread_id, thread_type)
         #self.send(Message(text="Ouch!"), thread_id=thread_id, thread_type=thread_type)
         self.stopListening()
     elif text == "BEGONE CHAD!":
@@ -98,9 +95,18 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         
         user = self.fetchUserInfo(author_id)[author_id]
         
-        print("Rolling dice for " + (user.nickname or user.first_name))
+        #cache this, update on onNicknameChanged
+        nicknames = {}
+        nicknames[user.uid] = user.nickname
+        if thread_type == ThreadType.GROUP:
+            nicknames = self.fetchGroupInfo(thread_id)[thread_id].nicknames
+            print(nicknames)
         
-        name = "@"+(user.nickname or user.first_name)
+        
+        nickname = nicknames.get(user.uid)
+        
+        
+        name = "@"+(nickname or user.first_name)
         
         try:
             #gets the rest of the text following the end of the roll command
@@ -111,7 +117,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         response = name + " rolled " + str(total) + reason
         
         responses.put((Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type))
-        return
+        
 
 class Chad(Client):
     active = True
