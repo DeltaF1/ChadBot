@@ -45,6 +45,10 @@ def response_loop():
         
 
 def parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
+    
+    
+    if author_id == self.uid:
+        return
     text = message_object.text
     
     gre = Re()
