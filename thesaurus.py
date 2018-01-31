@@ -20,7 +20,7 @@ def get_synonyms(word):
     
 def parse_response(r):    
     if r.status_code == 200:
-        print(r.text)
+        #print(r.text)
         return [word.split("|")[2] for word in r.text.strip().split("\n")]
     elif r.status_code == 303:
         return parse_response(requests.get(r.headers["Location"]))
