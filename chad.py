@@ -8,18 +8,8 @@ import json
 from fbchat import Client
 from fbchat.models import *
 
-import thesaurus
-
-#from Markus Jarderot @ https://stackoverflow.com/questions/597476
-class Re(object):
-  def __init__(self):
-    self.last_match = None
-  def match(self,pattern,text):
-    self.last_match = re.match(pattern,text)
-    return self.last_match
-  def search(self,pattern,text):
-    self.last_match = re.search(pattern,text)
-    return self.last_match
+import thesaurus, datamuse
+from utils import *
 
 
 def response_loop():
@@ -45,17 +35,16 @@ def response_loop():
         
 
 def parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
-    
-    
     if author_id == self.uid:
         return
+        
     text = message_object.text
     
     gre = Re()
 
     if gre.match(virgin_re, text.lower()):
-        word = gre.last_match.group(1)
-        synonyms = thesaurus.get_synonyms(word)
+        word = gre.last_match.group(1).strip()
+        synonyms = datamuse.get_synonyms(word)
 
         try:
             chadlier = random.choice(synonyms)
@@ -75,6 +64,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         exit_message = "Chad strides into the sunset, never to be seen again"
         self.send(Message(text=exit_message, mentions=[Mention(self.uid, 0, len(exit_message))]), thread_id, thread_type)
         self.removeUserFromGroup(self.uid, thread_id)
+    elif author_id == config["facebook"]["owner_uid"] and text.lower() == "restart chad":
+        print("Restarting!")
+        self.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
+        os.execv(sys.executable, ['python'] + sys.argv)
     elif gre.search(dice_re, text.lower()):
         match = gre.last_match
         num_dice = int(match.group(1) or '1')
@@ -85,7 +78,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
             constant = 0
         
         total = 0
-        if dice_type > 0 and num_dice > 0 and num_dice <= 200:
+        if dice_type > 0 and dice_type < 10000 and num_dice > 0 and num_dice <= 200:
             for i in range(num_dice):
                 total += random.randint(1, dice_type)
         else:
@@ -128,6 +121,12 @@ class Chad(Client):
         thread.daemon = True
         
         thread.start()
+    
+    #currently not working, see https://github.com/carpedm20/fbchat/issues/232
+    def onFriendRequest(self, from_id, msg):
+        print("Got friend request from "+from_id)
+        self.friendConnect(from_id)
+    
 if __name__ == '__main__':
     with open("conf.json", "r") as f:
         config = json.load(f)
@@ -135,7 +134,7 @@ if __name__ == '__main__':
 
     owner_uid = config["facebook"]["owner_uid"]
 
-    virgin_re = re.compile("the virgin (.*)");
+    virgin_re = re.compile("the virgin ([\w\s]*)");
     dice_re = re.compile("roll ([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
     
     responses = Queue()

@@ -10,10 +10,9 @@ def get_synonyms(word):
     r = requests.get(url, params =
     {
         "ml" : word,
+        "topics" : "masculine",
         "md" : "f",
     })
-    
-    print(r.url)
     
     words = r.json()
     
