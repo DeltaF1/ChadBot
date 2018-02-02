@@ -39,7 +39,18 @@ def response_loop():
 def parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
     if author_id == self.uid:
         return
-        
+    
+    try:
+        mute_ts = timeouts[thread_id]["mute"]
+    except KeyError:
+        mute_ts = 0
+    
+    diff = ts - mute_ts
+    
+    #if it's been less than 10 minutes since chad was muted for this channel
+    if diff <= (10 * 60 * 100):
+        return
+    
     text = message_object.text
     
     gre = Re()
@@ -79,10 +90,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         print(timeouts)
         print("ts = "+str(ts))
         
-    elif author_id == config["facebook"]["owner_uid"] and message_object.text == "STOP IT CHAD":
+    elif text == "STOP IT CHAD":
         self.send(Message(text="Ouch!"), thread_id, thread_type)
-        #self.send(Message(text="Ouch!"), thread_id=thread_id, thread_type=thread_type)
-        self.stopListening()
+        
+        nested_set(timeouts, [thread_id, "mute"], ts)
     elif text == "BEGONE CHAD!":
         exit_message = "Chad strides into the sunset, never to be seen again"
         self.send(Message(text=exit_message, mentions=[Mention(self.uid, 0, len(exit_message))]), thread_id, thread_type)
