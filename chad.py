@@ -11,6 +11,8 @@ from fbchat.models import *
 import thesaurus, datamuse
 from utils import *
 
+#replace with persistent storage
+timeouts = {}
 
 def response_loop():
     while True:
@@ -56,6 +58,27 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
             response = "THE CHAD {}".format(chadlier.upper())
 
             responses.put((response, thread_id, thread_type))
+    elif text.lower() == "f":
+        try:
+            last_f = timeouts[thread_id]["f"]
+        except KeyError:
+            print("No tlast_f time")
+            last_f = 0
+        
+        diff = ts - last_f
+        
+        F_RATE = 20000
+        
+        if diff > F_RATE:
+            responses.put(("F", thread_id, thread_type))
+        else:
+            return
+        
+        nested_set(timeouts, [thread_id, "f"], ts)
+        
+        print(timeouts)
+        print("ts = "+str(ts))
+        
     elif author_id == config["facebook"]["owner_uid"] and message_object.text == "STOP IT CHAD":
         self.send(Message(text="Ouch!"), thread_id, thread_type)
         #self.send(Message(text="Ouch!"), thread_id=thread_id, thread_type=thread_type)
