@@ -158,7 +158,7 @@ class Chad(Client):
     
     #currently not working, see https://github.com/carpedm20/fbchat/issues/232
     def onFriendRequest(self, from_id, msg):
-        print("Got friend request from "+from_id)
+        print("Got friend request from "+str(from_id))
         self.friendConnect(from_id)
     
 if __name__ == '__main__':
