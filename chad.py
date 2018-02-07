@@ -4,11 +4,12 @@ import time, re, random, os, sys
 import threading
 from queue import Queue
 import json
+import sqlite3
 
 from fbchat import Client
 from fbchat.models import *
 
-import thesaurus, datamuse
+import datamuse
 from utils import *
 
 #replace with persistent storage
@@ -165,7 +166,9 @@ if __name__ == '__main__':
     with open("conf.json", "r") as f:
         config = json.load(f)
 
-
+    
+    
+    
     owner_uid = config["facebook"]["owner_uid"]
 
     virgin_re = re.compile("the virgin ([\w\s]*)");
