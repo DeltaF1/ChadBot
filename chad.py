@@ -157,7 +157,6 @@ class Chad(Client):
         
         thread.start()
     
-    #currently not working, see https://github.com/carpedm20/fbchat/issues/232
     def onFriendRequest(self, from_id, msg):
         print("Got friend request from "+str(from_id))
         self.friendConnect(from_id)
