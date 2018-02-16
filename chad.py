@@ -203,7 +203,7 @@ if __name__ == '__main__':
     owner_uid = config["facebook"]["owner_uid"]
 
     virgin_re = re.compile("the virgin ([\w\s]*)");
-    dice_re = re.compile("roll ([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
+    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
     coin_re = re.compile("flip (a|\d+) coin(?:s?)")
     
     responses = Queue()
