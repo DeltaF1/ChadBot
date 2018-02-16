@@ -30,7 +30,11 @@ def response_loop():
         chad.setTypingStatus(TypingStatus.TYPING, thread_id=thread_id, thread_type=thread_type)
 
         time.sleep(random.random() + 0.5)
-        chad.send(text, thread_id=thread_id, thread_type=thread_type)
+        
+        try:
+            chad.send(text, thread_id=thread_id, thread_type=thread_type)
+        except Exception as e:
+            print("Error sending message: ", e)
         
         
         chad.setTypingStatus(TypingStatus.STOPPED, thread_id=thread_id, thread_type=thread_type)
@@ -159,7 +163,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         
         if num_coins == 1:
             result = random.choice(("heads", "tails"))
-        else:
+        elif 0 < num_coins <= 25:
             result = "["
             
             for i in range(num_coins):
@@ -174,7 +178,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         
         responses.put((Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type))
     elif "69" in text or "420" in text:
-        responses.put("nice", thread_id, thread_type)
+        responses.put(("nice", thread_id, thread_type))
         
         
 class Chad(Client):
