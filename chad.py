@@ -170,7 +170,8 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
                 result += random.choice(("H", "T")) + ","
             
             result = result[:-1] + "]"
-        
+        else:
+            return
         
         name = get_name(self, author_id, thread_id, thread_type)
         
