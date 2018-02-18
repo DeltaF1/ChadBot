@@ -14,10 +14,6 @@ from utils import *
 
 import database
 
-#replace with persistent storage
-timeouts = {}
-
-DB = database.Database("chad.sqlite3")
 
 def response_loop():
     while True:
@@ -71,7 +67,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     diff = ts - mute_ts
     
     #if it's been less than 10 minutes since chad was muted for this channel
-    if diff <= (10 * 60 * 100):
+    if diff <= (10 * 60 * 1000):
         return
     
     text = message_object.text
@@ -80,25 +76,30 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
 
     if gre.match(virgin_re, text.lower()):
         word = gre.last_match.group(1).strip()
-        synonyms = datamuse.get_synonyms(word)
+        
+        chadlier = DB.get_chad(word)
+        
+        if not chadlier:
+            
+            synonyms = datamuse.get_synonyms(word)
 
-        try:
-            chadlier = random.choice(synonyms)
-        except IndexError:
-            return
+            try:
+                chadlier = random.choice(synonyms)
+            except IndexError:
+                return
 
         if chadlier:
-
-            response = "THE CHAD {}".format(chadlier.upper())
+            
+            if chadlier == "{{CHAD}}":
+                response = "{} IS AS CHADLY AS IT GETS".format(word.upper())
+            else:
+                response = "THE CHAD {}".format(chadlier.upper())
 
             responses.put((response, thread_id, thread_type))
     elif text.lower() == "f":
-        try:
-            last_f = timeouts[thread_id]["f"]
-        except KeyError:
-            print("No tlast_f time")
-            last_f = 0
         
+        last_f = DB.get_timeout(thread_id, "f")
+
         diff = ts - last_f
         
         F_RATE = 20000
@@ -108,9 +109,8 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
         
-        nested_set(timeouts, [thread_id, "f"], ts)
+        DB.set_timeout(thread_id, "f", ts)
         
-        print(timeouts)
         print("ts = "+str(ts))
         
     elif text == "STOP IT CHAD":
@@ -214,13 +214,22 @@ if __name__ == '__main__':
     
     responses = Queue()
     
-    chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
+    DB = database.Database("chad.sqlite3")
+    
+    database_thread = threading.Thread(target = DB.loop)
+    database_thread.daemon = True
+    database_thread.start()
+    
 
     response_thread = threading.Thread(target=response_loop)
     response_thread.daemon = True
 
     response_thread.start()
 
+   
+    
+    chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
+    
     chad.listen()
 
     chad.logout()
