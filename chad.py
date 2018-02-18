@@ -12,8 +12,12 @@ from fbchat.models import *
 import datamuse
 from utils import *
 
+import database
+
 #replace with persistent storage
 timeouts = {}
+
+DB = database.Database("chad.sqlite3")
 
 def response_loop():
     while True:
@@ -62,10 +66,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     if author_id == self.uid:
         return
     
-    try:
-        mute_ts = timeouts[thread_id]["mute"]
-    except KeyError:
-        mute_ts = 0
+    mute_ts = DB.get_timeout(thread_id, "mute")
     
     diff = ts - mute_ts
     
@@ -115,7 +116,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     elif text == "STOP IT CHAD":
         self.send(Message(text="Ouch!"), thread_id, thread_type)
         
-        nested_set(timeouts, [thread_id, "mute"], ts)
+        DB.set_timeout(thread_id, "mute", ts)
     elif text == "BEGONE CHAD!":
         exit_message = "Chad strides into the sunset, never to be seen again"
         self.send(Message(text=exit_message, mentions=[Mention(self.uid, 0, len(exit_message))]), thread_id, thread_type)
