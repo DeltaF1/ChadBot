@@ -12,8 +12,8 @@ from fbchat.models import *
 import datamuse
 from utils import *
 
-#replace with persistent storage
-timeouts = {}
+import database
+
 
 def response_loop():
     while True:
@@ -62,15 +62,12 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     if author_id == self.uid:
         return
     
-    try:
-        mute_ts = timeouts[thread_id]["mute"]
-    except KeyError:
-        mute_ts = 0
+    mute_ts = DB.get_timeout(thread_id, "mute")
     
     diff = ts - mute_ts
     
     #if it's been less than 10 minutes since chad was muted for this channel
-    if diff <= (10 * 60 * 100):
+    if diff <= (10 * 60 * 1000):
         return
     
     text = message_object.text
@@ -79,25 +76,30 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
 
     if gre.match(virgin_re, text.lower()):
         word = gre.last_match.group(1).strip()
-        synonyms = datamuse.get_synonyms(word)
+        
+        chadlier = DB.get_chad(word)
+        
+        if not chadlier:
+            
+            synonyms = datamuse.get_synonyms(word)
 
-        try:
-            chadlier = random.choice(synonyms)
-        except IndexError:
-            return
+            try:
+                chadlier = random.choice(synonyms)
+            except IndexError:
+                return
 
         if chadlier:
-
-            response = "THE CHAD {}".format(chadlier.upper())
+            
+            if chadlier == "{{CHAD}}":
+                response = "{} IS AS CHADLY AS IT GETS".format(word.upper())
+            else:
+                response = "THE CHAD {}".format(chadlier.upper())
 
             responses.put((response, thread_id, thread_type))
     elif text.lower() == "f":
-        try:
-            last_f = timeouts[thread_id]["f"]
-        except KeyError:
-            print("No tlast_f time")
-            last_f = 0
         
+        last_f = DB.get_timeout(thread_id, "f")
+
         diff = ts - last_f
         
         F_RATE = 20000
@@ -107,15 +109,14 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
         
-        nested_set(timeouts, [thread_id, "f"], ts)
+        DB.set_timeout(thread_id, "f", ts)
         
-        print(timeouts)
         print("ts = "+str(ts))
         
     elif text == "STOP IT CHAD":
         self.send(Message(text="Ouch!"), thread_id, thread_type)
         
-        nested_set(timeouts, [thread_id, "mute"], ts)
+        DB.set_timeout(thread_id, "mute", ts)
     elif text == "BEGONE CHAD!":
         exit_message = "Chad strides into the sunset, never to be seen again"
         self.send(Message(text=exit_message, mentions=[Mention(self.uid, 0, len(exit_message))]), thread_id, thread_type)
@@ -123,15 +124,20 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     elif author_id == config["facebook"]["owner_uid"] and text.lower() == "restart chad":
         print("Restarting!")
         self.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
-        os.execv(sys.executable, ['python'] + sys.argv)
+        
+        #May not be portable
+        os.execv(sys.executable, ['python3'] + sys.argv)
     elif gre.search(dice_re, text.lower()):
         match = gre.last_match
         num_dice = int(match.group(1) or '1')
         dice_type = int(match.group(2))
+        
         if match.group(3):
-            constant = int(match.group(3))
+            constant = int(match.group(4))
+            opr = match.group(3)
         else:
             constant = 0
+            opr = "+"
         
         total = 0
         if dice_type > 0 and dice_type < 10000 and num_dice > 0 and num_dice <= 200:
@@ -140,7 +146,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
             
-        total += constant
+        if opr == "+":
+            total += constant
+        else:
+            total -= constant
         
         name = get_name(self, author_id, thread_id, thread_type)
         
@@ -208,18 +217,27 @@ if __name__ == '__main__':
     owner_uid = config["facebook"]["owner_uid"]
 
     virgin_re = re.compile("the virgin ([\w\s]*)");
-    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
+    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *([+-]) *([0-9]+))?")
     coin_re = re.compile("flip (a|\d+) coin(?:s?)")
     
     responses = Queue()
     
-    chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
+    DB = database.Database("chad.sqlite3")
+    
+    database_thread = threading.Thread(target = DB.loop)
+    database_thread.daemon = True
+    database_thread.start()
+    
 
     response_thread = threading.Thread(target=response_loop)
     response_thread.daemon = True
 
     response_thread.start()
 
+   
+    
+    chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
+    
     chad.listen()
 
     chad.logout()
