@@ -205,9 +205,9 @@ class Chad(Client):
         print("Got friend request from "+str(from_id))
         self.friendConnect(from_id)
     
-    def onPeopleAdded(mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
-        if self.uid in addded_ids:
-            responses.put(("CHAD IS HERE", thread_id, thread_type.GROUP))
+    def onPeopleAdded(self, mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
+        if self.uid in added_ids:
+            responses.put(("CHAD IS HERE", thread_id, ThreadType.GROUP))
 
     
 if __name__ == '__main__':
