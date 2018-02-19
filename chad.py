@@ -124,7 +124,9 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     elif author_id == config["facebook"]["owner_uid"] and text.lower() == "restart chad":
         print("Restarting!")
         self.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
-        os.execv(sys.executable, ['python'] + sys.argv)
+        
+        #May not be portable
+        os.execv(sys.executable, ['python3'] + sys.argv)
     elif gre.search(dice_re, text.lower()):
         match = gre.last_match
         num_dice = int(match.group(1) or '1')
