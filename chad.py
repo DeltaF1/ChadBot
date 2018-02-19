@@ -131,10 +131,13 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         match = gre.last_match
         num_dice = int(match.group(1) or '1')
         dice_type = int(match.group(2))
+        
         if match.group(3):
-            constant = int(match.group(3))
+            constant = int(match.group(4))
+            opr = match.group(3)
         else:
             constant = 0
+            opr = "+"
         
         total = 0
         if dice_type > 0 and dice_type < 10000 and num_dice > 0 and num_dice <= 200:
@@ -143,7 +146,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
             
-        total += constant
+        if opr == "+":
+            total += constant
+        else:
+            total -= constant
         
         name = get_name(self, author_id, thread_id, thread_type)
         
@@ -211,7 +217,7 @@ if __name__ == '__main__':
     owner_uid = config["facebook"]["owner_uid"]
 
     virgin_re = re.compile("the virgin ([\w\s]*)");
-    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
+    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *([+-]) *([0-9]+))?")
     coin_re = re.compile("flip (a|\d+) coin(?:s?)")
     
     responses = Queue()
