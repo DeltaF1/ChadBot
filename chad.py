@@ -112,7 +112,6 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         DB.set_timeout(thread_id, "f", ts)
         
         print("ts = "+str(ts))
-        
     elif text == "STOP IT CHAD":
         self.send(Message(text="Ouch!"), thread_id, thread_type)
         
@@ -187,6 +186,12 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         response = name + " got " + result
         
         responses.put((Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type))
+    elif gre.match("!setchad ([\w ]+?) *, *([\w ]+)", text.lower()):
+        virgin = gre.last_match.group(1)
+        chad = gre.last_match.group(2)
+        
+        if len(virgin) and len(chad):
+            DB.set_chad(virgin, chad)
     elif "69" in text or "420" in text:
         responses.put(("nice", thread_id, thread_type))
         
