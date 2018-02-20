@@ -72,6 +72,9 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     
     text = message_object.text
     
+    if not text:
+        return
+    
     gre = Re()
 
     if gre.match(virgin_re, text.lower()):
