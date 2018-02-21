@@ -22,31 +22,26 @@ class Database:
         self.conn.execute("CREATE TABLE IF NOT EXISTS timeouts (thread_id int, timeout_type varchar(4), ts int, PRIMARY KEY (thread_id, timeout_type));")
         self.conn.execute("CREATE TABLE IF NOT EXISTS custom_chads (virgin string PRIMARY KEY, chad string);")
     
-    def get_timeout(self, thread_id, type):
+    def _get_one(self, query, args, default=None):
         c = self.conn.cursor()
-        c.execute("SELECT ts FROM timeouts WHERE thread_id=? and timeout_type=?", (thread_id, type))
-
-        ts = c.fetchone()
+        c.execute(query, args)
+        
+        result = c.fetchone()
         
         try:
-            ts = ts[0]
+            result = result[0]
         except TypeError:
-            ts = 0
+            result = default
         
-        return ts
+        return result
+    
+    def get_timeout(self, thread_id, type):
+        
+        return self._get_one("SELECT ts FROM timeouts WHERE thread_id=? and timeout_type=?", (thread_id, type), 0)
     
     def get_chad(self, virgin):
-        c = self.conn.cursor()       
-        c.execute("SELECT chad FROM custom_chads WHERE virgin = ?", (virgin,))
         
-        chad = c.fetchone()
-        
-        try:
-            chad = chad[0]
-        except TypeError:
-            chad = None
-        
-        return chad
+        return self._get_one("SELECT chad FROM custom_chads WHERE virgin = ?", (virgin,))
         
     def set_chad(self, virgin, chad):
         self.to_write.put(("INSERT OR REPLACE INTO custom_chads (virgin, chad) values (?,?)", (virgin, chad)))
