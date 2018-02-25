@@ -15,30 +15,23 @@ from utils import *
 import database
 
 
-def response_loop():
-    while True:
-        to_send = responses.get()
+def type_message(client, message, delay, thread_id, thread_type):
+    if type(message) == str:
+        message = Message(text=message)
+    
+    delay = delay or random.random() + 0.5
+    
+    client.setTypingStatus(TypingStatus.TYPING, thread_id=thread_id, thread_type=thread_type)
+    
+    time.sleep(delay)
+    
+    try:
+        client.send(message, thread_id=thread_id, thread_type=thread_type)
+    except Exception as e:
+        print("Error sending message: ", e)
+    
+    client.setTypingStatus(TypingStatus.STOPPED, thread_id=thread_id, thread_type=thread_type)
         
-        text=to_send[0]
-        
-        if type(text) == str:
-            text = Message(text=text)
-        
-        thread_id=to_send[1]
-        thread_type=to_send[2]
-        
-        chad.setTypingStatus(TypingStatus.TYPING, thread_id=thread_id, thread_type=thread_type)
-
-        time.sleep(random.random() + 0.5)
-        
-        try:
-            chad.send(text, thread_id=thread_id, thread_type=thread_type)
-        except Exception as e:
-            print("Error sending message: ", e)
-        
-        
-        chad.setTypingStatus(TypingStatus.STOPPED, thread_id=thread_id, thread_type=thread_type)
-
 
 def get_name(self, author_id, thread_id, thread_type):
     user = self.fetchUserInfo(author_id)[author_id]
@@ -58,8 +51,8 @@ def get_name(self, author_id, thread_id, thread_type):
     
     return name
 
-def parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
-    if author_id == self.uid:
+def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
+    if author_id == client.uid:
         return
     
     mute_ts = DB.get_timeout(thread_id, "mute")
@@ -70,10 +63,10 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
     if diff <= (10 * 60 * 1000):
         return
     
-    text = message_object.text
+    response = None
+    response_time = None
     
-    if not text:
-        return
+    text = message_object.text
     
     gre = Re()
 
@@ -98,7 +91,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
             else:
                 response = "THE CHAD {}".format(chadlier.upper())
 
-            responses.put((response, thread_id, thread_type))
+            response = (response, thread_id, thread_type)
     elif text.lower() == "f":
         
         last_f = DB.get_timeout(thread_id, "f")
@@ -108,38 +101,34 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         F_RATE = 20000
         
         if diff > F_RATE:
-            responses.put(("F", thread_id, thread_type))
+            response = ("F", thread_id, thread_type)
         else:
             return
         
         DB.set_timeout(thread_id, "f", ts)
         
         print("ts = "+str(ts))
+        
     elif text == "STOP IT CHAD":
-        self.send(Message(text="Ouch!"), thread_id, thread_type)
+        client.send(Message(text="Ouch!"), thread_id, thread_type)
         
         DB.set_timeout(thread_id, "mute", ts)
     elif text == "BEGONE CHAD!":
         exit_message = "Chad strides into the sunset, never to be seen again"
-        self.send(Message(text=exit_message, mentions=[Mention(self.uid, 0, len(exit_message))]), thread_id, thread_type)
-        self.removeUserFromGroup(self.uid, thread_id)
+        client.send(Message(text=exit_message, mentions=[Mention(client.uid, 0, len(exit_message))]), thread_id, thread_type)
+        client.removeUserFromGroup(client.uid, thread_id)
     elif author_id == config["facebook"]["owner_uid"] and text.lower() == "restart chad":
         print("Restarting!")
-        self.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
-        
-        #May not be portable
+        client.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
         os.execv(sys.executable, ['python3'] + sys.argv)
     elif gre.search(dice_re, text.lower()):
         match = gre.last_match
         num_dice = int(match.group(1) or '1')
         dice_type = int(match.group(2))
-        
         if match.group(3):
-            constant = int(match.group(4))
-            opr = match.group(3)
+            constant = int(match.group(3))
         else:
             constant = 0
-            opr = "+"
         
         total = 0
         if dice_type > 0 and dice_type < 10000 and num_dice > 0 and num_dice <= 200:
@@ -148,12 +137,9 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
             
-        if opr == "+":
-            total += constant
-        else:
-            total -= constant
+        total += constant
         
-        name = get_name(self, author_id, thread_id, thread_type)
+        name = get_name(client, author_id, thread_id, thread_type)
         
         try:
             #gets the rest of the text following the end of the roll command
@@ -163,7 +149,7 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         
         response = name + " rolled " + str(total) + reason
         
-        responses.put((Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type))
+        response = (Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type)
     elif gre.search(coin_re, text.lower()):
         match = gre.last_match
         
@@ -184,39 +170,57 @@ def parse_message(self, mid, author_id, message, message_object, thread_id, thre
         else:
             return
         
-        name = get_name(self, author_id, thread_id, thread_type)
+        name = get_name(client, author_id, thread_id, thread_type)
         
         response = name + " got " + result
         
-        responses.put((Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type))
-    elif gre.match("!setchad ([\w ]+?) *, *([\w ]+)", text.lower()):
-        virgin = gre.last_match.group(1)
-        chad = gre.last_match.group(2)
-        
-        if len(virgin) and len(chad):
-            DB.set_chad(virgin, chad)
+        response = (Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type)
     elif "69" in text or "420" in text:
-        responses.put(("nice", thread_id, thread_type))
-        
-        
-class Chad(Client):
-    active = True
-    #to do: spawn a new thread for every response
-    def onMessage(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
-        self.markAsDelivered(author_id, thread_id)
-        thread = threading.Thread(target=parse_message, args=(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg))
+        response = ("nice", thread_id, thread_type)
+    
+    #TODO: Will be replaced with "return response" in modules
+    if not response:
+        return
+    
+    type_message(client, response[0], response_time, response[1], response[2])
+    
+def threaded(func):
+    
+    def wrapper(*args, **kwargs):
+        thread = threading.Thread(target=func, args=args, kwargs=kwargs)
         thread.daemon = True
         
         thread.start()
+    
+    return wrapper
+    
+class Chad(Client):
+    active = True
+    
+    @threaded
+    def onMessage(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
+        self.markAsDelivered(author_id, thread_id)
+        #thread = threading.Thread(target=parse_message, args=(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg))
+        parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
+        #thread.daemon = True
+        
+        #thread.start()
     
     def onFriendRequest(self, from_id, msg):
         print("Got friend request from "+str(from_id))
         self.friendConnect(from_id)
     
-    def onPeopleAdded(self, mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
-        if self.uid in added_ids:
-            responses.put(("CHAD IS HERE", thread_id, ThreadType.GROUP))
+    @threaded
+    def onPeopleAdded(mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
+        if self.uid in addded_ids:
+            type_message(self, "CHAD IS HERE", None, thread_id, thread_type.GROUP)
 
+    
+def input_loop():
+    cmd = input()
+    
+    if input == "restart":
+        os.execv(sys.executable, ['python3'] + sys.argv)
     
 if __name__ == '__main__':
     with open("conf.json", "r") as f:
@@ -225,10 +229,10 @@ if __name__ == '__main__':
     owner_uid = config["facebook"]["owner_uid"]
 
     virgin_re = re.compile("the virgin ([\w\s]*)");
-    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *([+-]) *([0-9]+))?")
+    dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
     coin_re = re.compile("flip (a|\d+) coin(?:s?)")
     
-    responses = Queue()
+    #responses = Queue()
     
     DB = database.Database("chad.sqlite3")
     
@@ -237,10 +241,10 @@ if __name__ == '__main__':
     database_thread.start()
     
 
-    response_thread = threading.Thread(target=response_loop)
-    response_thread.daemon = True
+    #response_thread = threading.Thread(target=response_loop)
+    #response_thread.daemon = True
 
-    response_thread.start()
+    #response_thread.start()
 
    
     
