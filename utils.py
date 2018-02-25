@@ -1,4 +1,5 @@
 import re
+from fbchat.models import ThreadType
 
 #Class to keep state when checking if strings match regexes
 #from Markus Jarderot @ https://stackoverflow.com/questions/597476
@@ -24,3 +25,21 @@ def nested_set(dic, keys, value):
     for key in keys[:-1]:
         dic = dic.setdefault(key, {})
     dic[keys[-1]] = value
+    
+def get_name(client, author_id, thread_id, thread_type):
+    user = client.fetchUserInfo(author_id)[author_id]
+    
+    #cache this, update on onNicknameChanged
+    nicknames = {}
+    nicknames[user.uid] = user.nickname
+    if thread_type == ThreadType.GROUP:
+        nicknames = client.fetchGroupInfo(thread_id)[thread_id].nicknames
+        print(nicknames)
+    
+    
+    nickname = nicknames.get(user.uid)
+    
+    
+    name = "@"+(nickname or user.first_name)
+    
+    return name
