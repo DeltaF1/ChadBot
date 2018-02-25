@@ -215,7 +215,7 @@ class Chad(Client):
         if self.uid in addded_ids:
             type_message(self, "CHAD IS HERE", None, thread_id, thread_type.GROUP)
 
-    
+@threaded
 def input_loop():
     cmd = input()
     
@@ -232,21 +232,14 @@ if __name__ == '__main__':
     dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
     coin_re = re.compile("flip (a|\d+) coin(?:s?)")
     
-    #responses = Queue()
-    
     DB = database.Database("chad.sqlite3")
     
     database_thread = threading.Thread(target = DB.loop)
     database_thread.daemon = True
     database_thread.start()
     
-
-    #response_thread = threading.Thread(target=response_loop)
-    #response_thread.daemon = True
-
-    #response_thread.start()
-
-   
+    
+    input_loop()
     
     chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
     
