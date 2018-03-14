@@ -92,7 +92,7 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
     if not response:
         return
     
-    client.type_message(response[0], response_time, response[1], response[2])
+    client.type_message(response[0], response[1], response[2])
     
 def threaded(func):  
     def wrapper(*args, **kwargs):
@@ -103,6 +103,15 @@ def threaded(func):
     
     return wrapper
     
+
+def run_on_modules(func, *args, break_on_true=False, **kwargs):
+    for name in modules:
+        module = modules[name]
+        if hasattr(module, func):
+            result = getattr(module, func)(*args, **kwargs)
+            
+            if break_on_true and result:
+                break
     
 class Chad(Client):
     active = True
@@ -113,23 +122,25 @@ class Chad(Client):
         
         parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
         
+        run_on_modules("onMessage", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
+            
         for name in modules:
-            print("running module "+name)
             module = modules[name]
             print(dir(module))
             if hasattr(module, "parse_message"):
-                print("{}: parsing message".format(name))
                 result = module.parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
                 
                 if result:
                     break
-
-    def onFriendRequest(self, from_id, msg):
-        print("Got friend request from "+str(from_id))
-        self.friendConnect(from_id)
     
     @threaded
-    def onPeopleAdded(mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
+    def onFriendRequest(self, from_id, msg):
+        print("Got friend request from "+str(from_id))
+        run_on_modules("onFriendRequest", self, from_id, msg)
+        
+    
+    @threaded
+    def onPeopleAdded(self, mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
         if self.uid in addded_ids:
             self.type_message("CHAD IS HERE", thread_id, thread_type.GROUP)
 
