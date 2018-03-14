@@ -126,7 +126,6 @@ class Chad(Client):
             
         for name in modules:
             module = modules[name]
-            print(dir(module))
             if hasattr(module, "parse_message"):
                 result = module.parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
                 
