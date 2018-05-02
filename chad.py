@@ -202,7 +202,7 @@ if __name__ == '__main__':
     
     input_loop()
     
-    chad = Chad(config["facebook"]["email"], config["facebook"]["password"])
+    chad = Chad(config["facebook"]["email"], config["facebook"]["password"], user_agent=config["facebook"]["user_agent"])
     
     chad.listen()
 
