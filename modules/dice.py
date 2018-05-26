@@ -67,4 +67,7 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
         response = (Message(text=response, mentions=[Mention(author_id, 0, len(name))]), thread_id, thread_type)
         
     if not response: return None
-    return client.type_message(*response)
+    client.type_message(*response)
+    if total == 69:
+        client.type_message("nice", thread_id, thread_type)
+    return
