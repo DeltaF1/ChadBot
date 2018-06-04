@@ -111,8 +111,11 @@ def run_on_modules(func, *args, break_on_true=False, **kwargs):
     for name in modules:
         module = modules[name]
         if hasattr(module, func):
-            result = getattr(module, func)(*args, **kwargs)
-            
+            try:
+                result = getattr(module, func)(*args, **kwargs)
+            except Exception as e:
+                print("Error in module [{}]: {}".format(name, e))
+                continue
             if break_on_true and result:
                 break
     
@@ -126,7 +129,9 @@ class Chad(Client):
         parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
         
         run_on_modules("onMessage", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
-            
+        
+        run_on_modules("parse_message", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, break_on_true=True)
+        """
         for name in modules:
             module = modules[name]
             if hasattr(module, "parse_message"):
@@ -134,7 +139,7 @@ class Chad(Client):
                 
                 if result:
                     break
-    
+        """
     @threaded
     def onFriendRequest(self, from_id, msg):
         print("Got friend request from "+str(from_id))
@@ -167,10 +172,11 @@ class Chad(Client):
             
 @threaded
 def input_loop():
-    cmd = input()
-    
-    if input == "restart":
-        os.execv(sys.executable, ['python3'] + sys.argv)
+    while True:
+        cmd = input()
+        
+        if input == "restart":
+            os.execv(sys.executable, ['python3'] + sys.argv)
     
 if __name__ == '__main__':
     with open("conf.json", "r") as f:
