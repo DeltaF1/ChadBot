@@ -32,6 +32,9 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
     
     text = message_object.text
     
+    if not text:
+        return
+    
     gre = Re()
 
     if gre.match(virgin_re, text.lower()):
@@ -140,8 +143,8 @@ class Chad(Client):
     
     @threaded
     def onPeopleAdded(self, mid=None, added_ids=None, author_id=None, thread_id=None, ts=None, msg=None):
-        if self.uid in addded_ids:
-            self.type_message("CHAD IS HERE", thread_id, thread_type.GROUP)
+        if self.uid in added_ids:
+            self.type_message("CHAD IS HERE", thread_id, ThreadType.GROUP)
 
     def type_message(client, message, thread_id, thread_type, delay=None):
         if type(message) == str:
