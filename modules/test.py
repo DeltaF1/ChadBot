@@ -1,5 +1,5 @@
 
-def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
+def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, escaped_text=""):
     print("Inside module!")
     if message_object.text.lower() == "testing_modules":
         print("Sending!")

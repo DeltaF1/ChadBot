@@ -15,7 +15,8 @@ from utils import *
 import database
 
 
-def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
+def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, escaped_text=""):
+    print("escaped_text = "+escaped_text)
     if author_id == client.uid:
         return
     
@@ -30,7 +31,7 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
     response = None
     response_time = None
     
-    text = message_object.text
+    text = escaped_text
     
     if not text:
         return
@@ -107,7 +108,7 @@ def threaded(func):
     return wrapper
     
 
-def run_on_modules(func, *args, break_on_true=False, **kwargs):
+def run_on_modules(func, *args, break_on_result=False, **kwargs):
     for name in modules:
         module = modules[name]
         if hasattr(module, func):
@@ -116,7 +117,7 @@ def run_on_modules(func, *args, break_on_true=False, **kwargs):
             except Exception as e:
                 print("Error in module [{}]: {}".format(name, e))
                 continue
-            if break_on_true and result:
+            if break_on_result and result:
                 break
     
 class Chad(Client):
@@ -126,11 +127,27 @@ class Chad(Client):
     def onMessage(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
         self.markAsDelivered(author_id, thread_id)
         
-        parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
+        message_text = message_object.text
+        
+        #strip out text in mentions
+        if message_text:
+            escaped_text = message_text
+            
+            #keep track of how many characters have been deleted so far
+            offset = 0
+            for mention in message_object.mentions:
+                start = mention.offset - offset
+                end = start + mention.length
+                
+                offset += mention.length
+                
+                escaped_text = escaped_text[:start] + escaped_text [end:]
+        
+        parse_message(self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, escaped_text=escaped_text)
         
         run_on_modules("onMessage", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg)
         
-        run_on_modules("parse_message", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, break_on_true=True)
+        run_on_modules("parse_message", self, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, break_on_result=True, escaped_text=escaped_text)
         """
         for name in modules:
             module = modules[name]

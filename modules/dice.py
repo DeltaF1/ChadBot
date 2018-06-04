@@ -5,8 +5,8 @@ import random
 dice_re = re.compile("roll (?:a )?([0-9]*)d([0-9]+)(?: *\+ *([0-9]+))?")
 coin_re = re.compile("flip (a|\d+) coin(?:s?)")
 
-def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg):
-    text = message_object.text.lower()
+def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, escaped_text=""):
+    text = escaped_text
     gre = Re()
     
     response = None
