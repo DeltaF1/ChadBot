@@ -2,6 +2,7 @@
 
 import time, re, random, os, sys
 import threading
+import traceback
 import importlib
 import json
 import sqlite3
@@ -16,7 +17,7 @@ import database
 
 
 def parse_message(client, mid, author_id, message, message_object, thread_id, thread_type, ts, metadata, msg, escaped_text=""):
-    print("escaped_text = "+escaped_text)
+    print("escaped_text = "+str(escaped_text))
     if author_id == client.uid:
         return
     
@@ -66,7 +67,7 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
 
         diff = ts - last_f
         
-        F_RATE = 20000
+        F_RATE = 40000
         
         if diff > F_RATE:
             response = ("F", thread_id, thread_type)
@@ -89,6 +90,9 @@ def parse_message(client, mid, author_id, message, message_object, thread_id, th
         print("Restarting!")
         client.send(Message(text="*gives firm handshake* Chad will be right back."), thread_id, thread_type)
         os.execv(sys.executable, ['python3'] + sys.argv)
+    elif author_id == config["facebook"]["owner_uid"] and text.lower() == "!reload modules":
+        print("Reloading modules")
+        reload_modules()
     elif "69" in text or "420" in text:
         response = ("nice", thread_id, thread_type)
     
@@ -115,7 +119,8 @@ def run_on_modules(func, *args, break_on_result=False, **kwargs):
             try:
                 result = getattr(module, func)(*args, **kwargs)
             except Exception as e:
-                print("Error in module [{}]: {}".format(name, e))
+                print("Error in module [{}]:".format(name))
+                traceback.print_exception(None, e, e.__traceback__)
                 continue
             if break_on_result and result:
                 break
@@ -129,9 +134,9 @@ class Chad(Client):
         
         message_text = message_object.text
         
+        escaped_text = message_text
         #strip out text in mentions
         if message_text:
-            escaped_text = message_text
             
             #keep track of how many characters have been deleted so far
             offset = 0
@@ -195,16 +200,16 @@ def input_loop():
         if input == "restart":
             os.execv(sys.executable, ['python3'] + sys.argv)
     
-if __name__ == '__main__':
-    with open("conf.json", "r") as f:
-        config = json.load(f)
-
-    owner_uid = config["facebook"]["owner_uid"]
-
+def reload_modules():
+    for module_name in modules:
+        modules[module_name] = importlib.reload(modules[module_name])
+        
+def load_modules():
     #setup modules
     #From pycruft @ https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
     module_names = [f for f in os.listdir("modules") if os.path.isfile(os.path.join("modules", f))]
     
+    global modules
     modules = {}
     
     for name in module_names:
@@ -214,7 +219,15 @@ if __name__ == '__main__':
         if parts[1] != ".py":
             continue
             
-        modules[parts[0]] = importlib.import_module("modules."+parts[0])
+        modules[parts[0]] = importlib.import_module("modules."+parts[0]) 
+   
+if __name__ == '__main__':
+    with open("conf.json", "r") as f:
+        config = json.load(f)
+
+    owner_uid = config["facebook"]["owner_uid"]
+
+    load_modules()
     
     virgin_re = re.compile("the virgin ([\w\s]*)");
     

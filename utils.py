@@ -34,11 +34,10 @@ def get_name(client, author_id, thread_id, thread_type):
     nicknames[user.uid] = user.nickname
     if thread_type == ThreadType.GROUP:
         nicknames = client.fetchGroupInfo(thread_id)[thread_id].nicknames
-        print(nicknames)
-    
-    
-    nickname = nicknames.get(user.uid)
-    
+    if nicknames:
+        nickname = nicknames.get(user.uid)
+    else:
+        nickname = None
     
     name = "@"+(nickname or user.first_name)
     
